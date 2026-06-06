@@ -174,6 +174,75 @@ _safe_remove() {
     fi
 }
 
+
+# ── Best-effort GPU recovery before uninstall ─────────────────────────────────
+_reset_gpu_to_standard() {
+    _step 2 "RESETTING GPU MODE TO STANDARD"
+
+    local trigger_dir="/etc/ghelper"
+    local trigger="$trigger_dir/pending-gpu-mode"
+    local boot_script="/usr/local/lib/ghelper/ghelper-gpu-boot.sh"
+    local block_helper="/usr/local/lib/ghelper/gpu-block-helper.sh"
+
+    mkdir -p "$trigger_dir" 2>/dev/null || true
+    if [[ -d "$trigger_dir" ]]; then
+        echo "standard" > "$trigger" 2>/dev/null || true
+        chmod 644 "$trigger" 2>/dev/null || true
+    fi
+
+    if [[ -x "$boot_script" ]]; then
+        if "$boot_script" >/dev/null 2>&1; then
+            _info "GPU mode reset requested → Standard"
+        else
+            _warn "GPU Standard reset returned non-zero; continuing uninstall"
+        fi
+    else
+        _info "GPU boot script not present; skipping firmware Standard reset"
+    fi
+
+    if [[ -x "$block_helper" ]]; then
+        if "$block_helper" live-standard >/dev/null 2>&1; then
+            _info "GPU PCI block removed and PCI rescan requested"
+        else
+            _warn "GPU PCI live-standard cleanup failed; removing block files during purge"
+        fi
+    else
+        _info "GPU block helper not present; removing block files during purge"
+    fi
+}
+
+# ── Access group cleanup ───────────────────────────────────────────────────────
+_cleanup_access_group() {
+    _step 4 "CLEANING ACCESS GROUP"
+
+    if ! getent group "$ACCESS_GROUP" >/dev/null; then
+        _gone "group $ACCESS_GROUP"
+        return 0
+    fi
+
+    if [[ -n "$REAL_USER" ]] && id -nG "$REAL_USER" 2>/dev/null | tr ' ' '\n' | grep -qx "$ACCESS_GROUP"; then
+        if gpasswd -d "$REAL_USER" "$ACCESS_GROUP" >/dev/null 2>&1; then
+            _remove "group membership → $REAL_USER removed from $ACCESS_GROUP"
+        else
+            _warn "failed to remove $REAL_USER from $ACCESS_GROUP"
+        fi
+    else
+        _skip "group membership → ${REAL_USER:-unknown} not in $ACCESS_GROUP"
+    fi
+
+    local members
+    members="$(getent group "$ACCESS_GROUP" | cut -d: -f4)"
+    if [[ -z "$members" ]]; then
+        if groupdel "$ACCESS_GROUP" 2>/dev/null; then
+            _remove "group → $ACCESS_GROUP"
+        else
+            _warn "failed to delete group $ACCESS_GROUP; it may be a primary group or managed externally"
+        fi
+    else
+        _warn "group $ACCESS_GROUP still has members ($members); leaving it in place"
+    fi
+}
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  BANNER
 # ══════════════════════════════════════════════════════════════════════════════
@@ -207,7 +276,7 @@ echo ""
 if [[ "$MODE" == "uninstall" ]]; then
     echo "${RED}${BOLD}    ╔══════════════════════════════════════════════════════╗${RESET}"
     echo "${RED}${BOLD}    ║${RESET}  ${BOLD}UNINSTALL SEQUENCE${RESET}                    ${DIM}rev 1.0${RESET}       ${RED}${BOLD}║${RESET}"
-    echo "${RED}${BOLD}    ║${RESET}  ${DIM}PROTOCOL: TERMINATE → PURGE → CLEAN${RESET}                 ${RED}${BOLD}║${RESET}"
+    echo "${RED}${BOLD}    ║${RESET}  ${DIM}PROTOCOL: TERMINATE → GPU STANDARD → PURGE${RESET}                 ${RED}${BOLD}║${RESET}"
     echo "${RED}${BOLD}    ╚══════════════════════════════════════════════════════╝${RESET}"
 elif [[ "$MODE" == "appimage" ]]; then
     echo "${YELLOW}${BOLD}    ╔══════════════════════════════════════════════════════╗${RESET}"
@@ -246,8 +315,8 @@ if [[ "$MODE" == "uninstall" ]]; then
     echo ""
 
     echo "${RED}${BOLD}  ╔══[ CONFIRMATION REQUIRED ]════════════════════════════╗${RESET}"
-    echo "${RED}${BOLD}  ║${RESET}  This will remove G-Helper Linux and all system files."
-    echo "${RED}${BOLD}  ║${RESET}  ${DIM}User config (~/.config/ghelper) will NOT be removed.${RESET}"
+    echo "${RED}${BOLD}  ║${RESET}  This will remove G-Helper Linux, system files, and local user config."
+    echo "${RED}${BOLD}  ║${RESET}  ${DIM}GPU mode will be reset to Standard before files are removed.${RESET}"
     echo "${RED}${BOLD}  ╚═════════════════════════════════════════════════════════╝${RESET}"
     echo ""
     printf "  ${BOLD}Type ${RED}YES${RESET}${BOLD} to confirm uninstall: ${RESET}"
@@ -268,8 +337,11 @@ if [[ "$MODE" == "uninstall" ]]; then
         _info "${DIM}no running ghelper process found${RESET}"
     fi
 
+    # ── Reset GPU state before removing helpers ──
+    _reset_gpu_to_standard
+
     # ── Remove files ──
-    _step 2 "PURGING INSTALLED FILES"
+    _step 3 "PURGING INSTALLED FILES"
 
     # Disable systemd boot service BEFORE removing its unit file
     if systemctl is-enabled ghelper-gpu-boot.service 2>/dev/null; then
@@ -299,6 +371,7 @@ if [[ "$MODE" == "uninstall" ]]; then
     if [[ -n "$REAL_USER" ]]; then
         _safe_remove "/home/$REAL_USER/.local/share/applications/ghelper.desktop" "desktop entry (user)"
         _safe_remove "/home/$REAL_USER/.config/autostart/ghelper.desktop"          "autostart entry"
+        _safe_remove "/home/$REAL_USER/.config/ghelper"                    "user config"
     fi
 
     # Icons
@@ -311,8 +384,11 @@ if [[ "$MODE" == "uninstall" ]]; then
         _safe_remove "/home/$REAL_USER/.local/share/icons/hicolor/64x64/apps/ghelper.ico" "icon (user, ico legacy)"
     fi
 
+    # ── Remove access group if no trusted users remain ──
+    _cleanup_access_group
+
     # ── Reload daemons ──
-    _step 3 "RELOADING SYSTEM DAEMONS"
+    _step 5 "RELOADING SYSTEM DAEMONS"
     systemctl daemon-reload 2>/dev/null && _info "systemd daemon-reload" || true
     udevadm control --reload-rules 2>/dev/null && _info "udev daemon reloaded" || true
 
@@ -324,8 +400,8 @@ if [[ "$MODE" == "uninstall" ]]; then
     echo "${RED}${BOLD}  ║  ▓▓▓ UNINSTALL COMPLETE ▓▓▓                                    ║${RESET}"
     echo "${RED}${BOLD}  ║                                                                ║${RESET}"
     echo "${RED}${BOLD}  ╠════════════════════════════════════════════════════════════════╣${RESET}"
-    echo "${RED}${BOLD}  ║${RESET}  ${RED}REMOVED: $REMOVED files/directories${RESET}"
-    echo "${RED}${BOLD}  ║${RESET}  ${DIM}User config preserved at ~/.config/ghelper/${RESET}"
+    echo "${RED}${BOLD}  ║${RESET}  ${RED}REMOVED: $REMOVED items${RESET}"
+    echo "${RED}${BOLD}  ║${RESET}  ${DIM}Local user config removed for ${REAL_USER:-unknown}${RESET}"
     echo "${RED}${BOLD}  ║${RESET}  ${DIM}sysfs permissions will reset on next reboot${RESET}"
     echo "${RED}${BOLD}  ║                                                                ║${RESET}"
     echo "${RED}${BOLD}  ╚════════════════════════════════════════════════════════════════╝${RESET}"

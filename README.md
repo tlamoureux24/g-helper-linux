@@ -233,7 +233,7 @@ sudo usermod -aG ghelper <user>
 curl -sL https://raw.githubusercontent.com/utajum/g-helper-linux/master/install/install.sh | sudo bash -s -- --uninstall
 ```
 
-Removes system files + udev rules + desktop entry. User config in `~/.config/ghelper` is preserved.
+Resets GPU mode to Standard, removes system files, udev rules, desktop entry, local user config, and removes the `ghelper` group when no trusted users remain.
 
 ### `╠══[ MANUAL DOWNLOAD ]══╣`
 
