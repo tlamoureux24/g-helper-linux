@@ -28,6 +28,13 @@ public static class ResourceExtractorCli
             return 1;
         }
         string destDir = args[1];
+        string fullDestDir = Path.GetFullPath(destDir);
+        if (!string.Equals(fullDestDir, "/opt/ghelper", StringComparison.Ordinal))
+        {
+            Console.Error.WriteLine($"refusing to install {resourceName} outside /opt/ghelper");
+            return 1;
+        }
+
         string destPath = Path.Combine(destDir, resourceName);
 
         string tmpPath = destPath + ".new";

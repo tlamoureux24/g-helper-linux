@@ -1967,12 +1967,15 @@ public class GpuModeController
             var psi = new System.Diagnostics.ProcessStartInfo
             {
                 FileName = SysfsHelper.SudoPath,
-                Arguments = $"-n {SysfsHelper.GpuHelperPath} rmmod {module}",
                 RedirectStandardOutput = true,
                 RedirectStandardError = true,
                 UseShellExecute = false,
                 CreateNoWindow = true,
             };
+            psi.ArgumentList.Add("-n");
+            psi.ArgumentList.Add(SysfsHelper.GpuHelperPath);
+            psi.ArgumentList.Add("rmmod");
+            psi.ArgumentList.Add(module);
             using var proc = System.Diagnostics.Process.Start(psi);
             if (proc == null)
                 return (-1, "");
