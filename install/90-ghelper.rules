@@ -1,204 +1,151 @@
-# G-Helper Linux — udev rules for non-root access to ASUS hardware controls
+# G-Helper Linux - udev rules for non-root access to ASUS hardware controls
 # Install: sudo cp 90-ghelper.rules /etc/udev/rules.d/ && sudo udevadm control --reload-rules
 # Version: VERSION_PLACEHOLDER
 #
-# These rules grant read/write access to ASUS sysfs attributes for members of
-# the "input" group (or any user with a login session via uaccess).
+# These rules grant read/write access to ASUS hardware controls for members of
+# the "ghelper" group. The installer creates the group and adds the installing
+# user; multi-user systems can opt in additional trusted users with:
+#   sudo usermod -aG ghelper <user>
 
-# ── asus-nb-wmi platform device ──
-# Performance modes, power limits, panel overdrive, etc.
+# asus-nb-wmi platform device: performance modes, power limits, panel overdrive.
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{throttle_thermal_policy}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/throttle_thermal_policy"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/throttle_thermal_policy"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{panel_od}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/panel_od"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/panel_od"
 
-# PPT power limits (kernel 6.2+)
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{ppt_pl1_spl}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/ppt_pl1_spl"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/ppt_pl1_spl"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{ppt_pl2_sppt}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/ppt_pl2_sppt"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/ppt_pl2_sppt"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{ppt_fppt}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/ppt_fppt"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/ppt_fppt"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{nv_dynamic_boost}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/nv_dynamic_boost"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/nv_dynamic_boost"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{nv_temp_target}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/nv_temp_target"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/nv_temp_target"
 
-# Additional PPT power limits (less common, but present on some models)
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{ppt_apu_sppt}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/ppt_apu_sppt"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/ppt_apu_sppt"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{ppt_platform_sppt}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/ppt_platform_sppt"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/ppt_platform_sppt"
 
-# Fallback: batch-chmod ALL PPT attributes when asus-nb-wmi appears.
-# The ATTR{...}!="" condition above can miss attributes that appear slightly after the
-# platform device (timing race on dual-backend kernels with asus-armoury loaded).
-# This shell fallback catches any that were missed by the per-attribute rules.
+# Fallback for attributes that appear after the platform event.
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
-  RUN+="/bin/sh -c 'for attr in ppt_pl1_spl ppt_pl2_sppt ppt_fppt ppt_apu_sppt ppt_platform_sppt nv_dynamic_boost nv_temp_target; do [ -f /sys/devices/platform/asus-nb-wmi/$$attr ] && chmod 0666 /sys/devices/platform/asus-nb-wmi/$$attr; done'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/ppt_pl1_spl /sys/devices/platform/asus-nb-wmi/ppt_pl2_sppt /sys/devices/platform/asus-nb-wmi/ppt_fppt /sys/devices/platform/asus-nb-wmi/ppt_apu_sppt /sys/devices/platform/asus-nb-wmi/ppt_platform_sppt /sys/devices/platform/asus-nb-wmi/nv_dynamic_boost /sys/devices/platform/asus-nb-wmi/nv_temp_target"
 
-# eGPU and boot sound
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{egpu_enable}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/egpu_enable"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/egpu_enable"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{egpu_connected}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/egpu_connected"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/egpu_connected"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{boot_sound}!="", \
-  RUN+="/bin/chmod 0666 /sys/devices/platform/asus-nb-wmi/boot_sound"
-
-# platform_profile + CPU boost — also triggered via asus-nb-wmi since
-# dedicated module/cpu/acpi triggers are unreliable on some distros
-# (Bazzite/Fedora Atomic: intel_pstate built-in, CPU add fires too early).
-SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
-  RUN+="/bin/sh -c '[ -f /sys/firmware/acpi/platform_profile ] && chmod 0666 /sys/firmware/acpi/platform_profile'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/platform/asus-nb-wmi/boot_sound"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
-  RUN+="/bin/sh -c '[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ] && chmod 0666 /sys/devices/system/cpu/intel_pstate/no_turbo; [ -f /sys/devices/system/cpu/cpufreq/boost ] && chmod 0666 /sys/devices/system/cpu/cpufreq/boost'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/firmware/acpi/platform_profile /sys/devices/system/cpu/intel_pstate/no_turbo /sys/devices/system/cpu/cpufreq/boost"
 
-# ── asus-nb-wmi bus device ──
-# GPU Eco mode, MUX switch, Mini LED
+# asus-nb-wmi bus device: GPU Eco mode, MUX switch, Mini LED.
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{dgpu_disable}!="", \
-  RUN+="/bin/chmod 0666 /sys/bus/platform/devices/asus-nb-wmi/dgpu_disable"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/bus/platform/devices/asus-nb-wmi/dgpu_disable"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{gpu_mux_mode}!="", \
-  RUN+="/bin/chmod 0666 /sys/bus/platform/devices/asus-nb-wmi/gpu_mux_mode"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/bus/platform/devices/asus-nb-wmi/gpu_mux_mode"
 
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
   ATTR{mini_led_mode}!="", \
-  RUN+="/bin/chmod 0666 /sys/bus/platform/devices/asus-nb-wmi/mini_led_mode"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/bus/platform/devices/asus-nb-wmi/mini_led_mode"
 
-# PCI bus rescan — needed after dgpu_disable=0 (Eco→Standard) to re-enumerate dGPU
 SUBSYSTEM=="platform", DRIVER=="asus-nb-wmi", \
-  RUN+="/bin/chmod 0666 /sys/bus/pci/rescan"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/bus/pci/rescan"
 
-# ── Battery charge limit ──
+# Battery charge limit.
 SUBSYSTEM=="power_supply", ATTR{type}=="Battery", \
-  RUN+="/bin/sh -c '[ -f $sys$devpath/charge_control_end_threshold ] && chmod 0666 $sys$devpath/charge_control_end_threshold'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path $sys$devpath/charge_control_end_threshold"
 
+# ASUS LEDs and keyboard backlight.
 SUBSYSTEM=="leds", KERNEL=="asus::kbd_backlight*", \
-  RUN+="/bin/sh -c 'chmod 0666 /sys/class/leds/%k/brightness 2>/dev/null'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/class/leds/%k/brightness /sys/class/leds/%k/multi_intensity /sys/class/leds/%k/kbd_rgb_mode /sys/class/leds/%k/kbd_rgb_state"
 
 SUBSYSTEM=="leds", KERNEL=="asus::lightbar", \
-  RUN+="/bin/chmod 0666 /sys/class/leds/asus::lightbar/brightness"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/class/leds/asus::lightbar/brightness"
 
-SUBSYSTEM=="leds", KERNEL=="asus::kbd_backlight*", \
-  ATTR{multi_intensity}!="", \
-  RUN+="/bin/sh -c 'chmod 0666 /sys/class/leds/%k/multi_intensity 2>/dev/null'"
-
-SUBSYSTEM=="leds", KERNEL=="asus::kbd_backlight*", \
-  RUN+="/bin/sh -c '[ -f /sys/class/leds/%k/kbd_rgb_mode ] && chmod 0666 /sys/class/leds/%k/kbd_rgb_mode'"
-
-SUBSYSTEM=="leds", KERNEL=="asus::kbd_backlight*", \
-  RUN+="/bin/sh -c '[ -f /sys/class/leds/%k/kbd_rgb_state ] && chmod 0666 /sys/class/leds/%k/kbd_rgb_state'"
-
-# ── Fan curves (hwmon) ──
-# The asus_nb_wmi hwmon exposes pwm auto_point files for fan curve control.
-# We make them writable for non-root users.
+# Fan curves.
 SUBSYSTEM=="hwmon", ATTR{name}=="asus_nb_wmi", \
-  RUN+="/bin/sh -c 'for f in /sys/class/hwmon/%k/pwm*_auto_point*; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh glob /sys/class/hwmon/%k/pwm*_auto_point* /sys/class/hwmon/%k/pwm*_enable"
 
-SUBSYSTEM=="hwmon", ATTR{name}=="asus_nb_wmi", \
-  RUN+="/bin/sh -c 'for f in /sys/class/hwmon/%k/pwm*_enable; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+SUBSYSTEM=="hwmon", ATTR{name}=="asus_custom_fan_curve", \
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh glob /sys/class/hwmon/%k/pwm*_auto_point* /sys/class/hwmon/%k/pwm*_enable"
 
-# ── CPU boost ──
-# Intel (module trigger — works when intel_pstate is a loadable module)
+# CPU boost / platform profile.
 ACTION=="add|change", SUBSYSTEM=="module", KERNEL=="intel_pstate", \
-  RUN+="/bin/sh -c '[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ] && chmod 0666 /sys/devices/system/cpu/intel_pstate/no_turbo'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/system/cpu/intel_pstate/no_turbo"
 
-# AMD / generic cpufreq (module trigger)
 ACTION=="add|change", SUBSYSTEM=="module", KERNEL=="acpi_cpufreq", \
-  RUN+="/bin/sh -c '[ -f /sys/devices/system/cpu/cpufreq/boost ] && chmod 0666 /sys/devices/system/cpu/cpufreq/boost'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/system/cpu/cpufreq/boost"
 
-# CPU device trigger — catches built-in drivers (intel_pstate, amd_pstate) that don't
-# fire module events. Also sets platform_profile permissions.
-SUBSYSTEM=="cpu", ACTION=="add", \
-  RUN+="/bin/sh -c '[ -f /sys/devices/system/cpu/intel_pstate/no_turbo ] && chmod 0666 /sys/devices/system/cpu/intel_pstate/no_turbo; [ -f /sys/devices/system/cpu/cpufreq/boost ] && chmod 0666 /sys/devices/system/cpu/cpufreq/boost; [ -f /sys/firmware/acpi/platform_profile ] && chmod 0666 /sys/firmware/acpi/platform_profile'"
+SUBSYSTEM=="cpu", ACTION=="add|change", \
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/devices/system/cpu/intel_pstate/no_turbo /sys/devices/system/cpu/cpufreq/boost /sys/firmware/acpi/platform_profile"
 
-# ── ACPI platform profile ──
-# Allow non-root to set platform profile (balanced/performance/low-power)
 ACTION=="add|change", SUBSYSTEM=="acpi", \
-  RUN+="/bin/sh -c '[ -f /sys/firmware/acpi/platform_profile ] && chmod 0666 /sys/firmware/acpi/platform_profile'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/firmware/acpi/platform_profile"
 
-# ── Fan curves (asus_custom_fan_curve hwmon, newer kernels) ──
-SUBSYSTEM=="hwmon", ATTR{name}=="asus_custom_fan_curve", \
-  RUN+="/bin/sh -c 'for f in /sys/class/hwmon/%k/pwm*_auto_point*; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+# ASUS input devices and HID raw devices.
+SUBSYSTEM=="input", ATTRS{name}=="Asus WMI hotkeys", \
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /dev/input/%k"
 
-SUBSYSTEM=="hwmon", ATTR{name}=="asus_custom_fan_curve", \
-  RUN+="/bin/sh -c 'for f in /sys/class/hwmon/%k/pwm*_enable; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0b05", \
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /dev/input/%k"
 
-# ── ASUS input devices (hotkeys) ──
-# Grant read access to event devices so non-root can receive Fn-key events.
-# MODE=0666 is used instead of TAG+="uaccess" because uaccess relies on
-# systemd-logind seat detection which is unreliable on Fedora Atomic/Bazzite.
-SUBSYSTEM=="input", ATTRS{name}=="Asus WMI hotkeys", MODE="0666"
-# USB ASUS HID input devices — covers "Asus Keyboard", "ITE Tech. Inc. ITE Device(8910)", etc.
-SUBSYSTEM=="input", KERNEL=="event*", ATTRS{id/vendor}=="0b05", MODE="0666"
+SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", \
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /dev/%k"
 
-# ── ASUS HID devices (AURA RGB keyboard control) ──
-# Grant read/write access to ASUS HID raw devices for non-root AURA control.
-# USB-HID: match via USB parent's idVendor attribute
-SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", MODE="0666"
-SUBSYSTEM=="usb", ATTRS{idVendor}=="0b05", MODE="0666"
-# I2C-HID: ASUS keyboards connected via I2C (e.g., FA608PP: ITE51368:00 0B05:19B6)
-# have no USB parent, so ATTRS{idVendor} won't match. Match via the HID device
-# uevent which contains the vendor ID in HID_ID field.
+# I2C-HID ASUS keyboards have no USB parent; match via the HID uevent vendor id.
 SUBSYSTEM=="hidraw", ACTION=="add", \
-  RUN+="/bin/sh -c 'grep -q 00000B05 /sys%p/device/uevent 2>/dev/null && chmod 0666 /dev/%k'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh asus-hidraw %k"
 
-# ── Backlight ──
+# Backlight.
 SUBSYSTEM=="backlight", ACTION=="add", \
-  RUN+="/bin/chmod 0666 /sys%p/brightness"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys%p/brightness"
 
-# ── PCIe ASPM policy ──
+# PCIe ASPM policy.
 ACTION=="add|change", SUBSYSTEM=="module", KERNEL=="pcie_aspm", \
-  RUN+="/bin/sh -c '[ -f /sys/module/pcie_aspm/parameters/policy ] && chmod 0666 /sys/module/pcie_aspm/parameters/policy'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/module/pcie_aspm/parameters/policy"
 
-# ── ASUS firmware-attributes (asus-armoury, kernel 6.8+) ──
-# On newer kernels, ASUS WMI attributes move to firmware-attributes.
-# chmod all current_value files under the asus-armoury attributes dir.
+# ASUS firmware-attributes (asus-armoury, kernel 6.8+).
 ACTION=="add|change", SUBSYSTEM=="firmware-attributes", \
-  RUN+="/bin/sh -c 'for f in /sys/class/firmware-attributes/asus-armoury/attributes/*/current_value; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh glob /sys/class/firmware-attributes/asus-armoury/attributes/*/current_value"
 
-# Trigger on asus_armoury module load — the firmware-attributes subsystem event above
-# may fire before all attribute files are populated (race on fast kernels like CachyOS).
-# This module trigger provides a second chance with a brief delay.
 ACTION=="add|change", SUBSYSTEM=="module", KERNEL=="asus_armoury", \
-  RUN+="/bin/sh -c 'sleep 1; for f in /sys/class/firmware-attributes/asus-armoury/attributes/*/current_value; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+  RUN+="/bin/sh -c 'sleep 1; /usr/local/lib/ghelper/ghelper-permissions.sh glob /sys/class/firmware-attributes/asus-armoury/attributes/*/current_value'"
 
-# ── ryzen_smu (Curve Optimizer undervolting) ──
-# Only rsmu_cmd and smu_args need write access for sending CO commands.
-# Other attributes (codename, version, pm_table, …) remain read-only.
+# ryzen_smu (Curve Optimizer undervolting).
 ACTION=="add|change", SUBSYSTEM=="module", KERNEL=="ryzen_smu", \
-  RUN+="/bin/sh -c 'chmod 0666 /sys/kernel/ryzen_smu_drv/rsmu_cmd /sys/kernel/ryzen_smu_drv/smu_args 2>/dev/null || true'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/kernel/ryzen_smu_drv/rsmu_cmd /sys/kernel/ryzen_smu_drv/smu_args"
 
-# Fallback via CPU device tree — module events don't re-fire on `udevadm trigger`
-# (installer path), so the rule above can miss on fresh install if ryzen_smu was
-# loaded at boot. CPU events fire on trigger (unlike module events); add|change
-# covers both boot-time add and the default `change` action trigger sends.
 SUBSYSTEM=="cpu", KERNEL=="cpu0", ACTION=="add|change", \
-  RUN+="/bin/sh -c '[ -f /sys/kernel/ryzen_smu_drv/rsmu_cmd ] && chmod 0666 /sys/kernel/ryzen_smu_drv/rsmu_cmd /sys/kernel/ryzen_smu_drv/smu_args'"
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh path /sys/kernel/ryzen_smu_drv/rsmu_cmd /sys/kernel/ryzen_smu_drv/smu_args"
 
-# ── CPU online/offline (core toggling) ──
-SUBSYSTEM=="cpu", ACTION=="add", \
-  RUN+="/bin/sh -c 'for f in /sys/devices/system/cpu/cpu*/online; do [ -f \"$$f\" ] && chmod 0666 \"$$f\"; done'"
+# CPU online/offline (core toggling).
+SUBSYSTEM=="cpu", ACTION=="add|change", \
+  RUN+="/usr/local/lib/ghelper/ghelper-permissions.sh glob /sys/devices/system/cpu/cpu*/online"

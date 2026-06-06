@@ -217,6 +217,16 @@ lsmod | grep asus
 curl -sL https://raw.githubusercontent.com/utajum/g-helper-linux/master/install/install.sh | sudo bash
 ```
 
+The installer creates a `ghelper` system group, adds the installing user, and
+grants hardware access to that group only. Log out and back in after install so
+your desktop session receives the new group membership.
+
+On multi-user systems, add every trusted user who should control laptop hardware:
+
+```bash
+sudo usermod -aG ghelper <user>
+```
+
 ### `╠══[ QUICK UNINSTALL ]══╣`
 
 ```bash
@@ -290,11 +300,14 @@ cd src && dotnet publish -c Release
 ║  0xF2  udev       /etc/udev/rules.d/90-ghelper.rules          ║
 ║  0xF3  Desktop    /usr/share/applications/ghelper.desktop      ║
 ║  0xF4  Autostart  ~/.config/autostart/ghelper.desktop          ║
+║  0xF5  Group      ghelper                                     ║
 ║                                                                 ║
 ╚═════════════════════════════════════════════════════════════════╝
 ```
 
 `install.sh` downloads the release binary. `install-local.sh` uses the local build from `dist/`.
+Hardware nodes are group-owned by `ghelper` with `0660` permissions instead of
+being writable by every local user.
 
 ```bash
 # reload udev after install (or reboot)
@@ -306,6 +319,10 @@ sudo udevadm control --reload-rules && sudo udevadm trigger
 
 ```bash
 # udev rules
+sudo groupadd --system ghelper || true
+sudo usermod -aG ghelper "$USER"
+sudo install -d -m 755 /usr/local/lib/ghelper
+sudo install -m 755 install/ghelper-permissions.sh /usr/local/lib/ghelper/
 sudo cp install/90-ghelper.rules /etc/udev/rules.d/
 sudo udevadm control --reload-rules && sudo udevadm trigger
 

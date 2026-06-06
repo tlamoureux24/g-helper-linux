@@ -49,6 +49,7 @@ fi
 INSTALL_DIR="/opt/ghelper"
 UDEV_DEST="/etc/udev/rules.d/90-ghelper.rules"
 DESKTOP_DEST="/usr/share/applications/ghelper.desktop"
+ACCESS_GROUP="ghelper"
 
 if [[ -w "/usr/share/applications" ]] 2>/dev/null; then
     DESKTOP_DEST="/usr/share/applications/ghelper.desktop"
@@ -120,12 +121,35 @@ _install_file() {
 _ensure_chmod() {
     local file="$1"
     [[ -f "$file" ]] || return 0
-    local current
-    current=$(stat -c '%a' "$file" 2>/dev/null || echo "000")
-    if [[ "$current" == "666" ]]; then
+    local current_mode current_group
+    current_mode=$(stat -c '%a' "$file" 2>/dev/null || echo "000")
+    current_group=$(stat -c '%G' "$file" 2>/dev/null || echo "")
+    if [[ "$current_mode" == "660" && "$current_group" == "$ACCESS_GROUP" ]]; then
         _chok "$file"
     else
-        chmod 0666 "$file" 2>/dev/null && _chmod "$file" || true
+        chgrp "$ACCESS_GROUP" "$file" 2>/dev/null || true
+        chmod 0660 "$file" 2>/dev/null && _chmod "$file" || true
+    fi
+}
+
+_ensure_access_group() {
+    if getent group "$ACCESS_GROUP" >/dev/null; then
+        _skip "group → $ACCESS_GROUP already exists"
+    else
+        groupadd --system "$ACCESS_GROUP" 2>/dev/null || groupadd "$ACCESS_GROUP"
+        _inject "group → $ACCESS_GROUP"
+    fi
+}
+
+_ensure_user_in_group() {
+    local user="$1"
+    [[ -n "$user" ]] || return 0
+    if id -nG "$user" 2>/dev/null | tr ' ' '\n' | grep -qx "$ACCESS_GROUP"; then
+        _skip "group membership → $user already in $ACCESS_GROUP"
+    else
+        usermod -aG "$ACCESS_GROUP" "$user"
+        _inject "group membership → $user added to $ACCESS_GROUP"
+        _warn "log out and back in for the new $ACCESS_GROUP membership to affect running sessions"
     fi
 }
 
@@ -300,6 +324,9 @@ if [[ "$MODE" == "install" ]]; then
     echo "${GREEN}  ▸ TARGET${RESET} ${DIM}............................${RESET} ${CYAN}$INSTALL_DIR/${RESET}"
 fi
 
+_ensure_access_group
+_ensure_user_in_group "$REAL_USER"
+
 # ══════════════════════════════════════════════════════════════════════════════
 #  [0x01] VERIFY LOCAL BUILD (install mode only)
 # ══════════════════════════════════════════════════════════════════════════════
@@ -347,11 +374,9 @@ if [[ "$MODE" == "install" ]]; then
         _inject "symlink → /usr/local/bin/ghelper"
     fi
 
-    # Fix ownership so the real user can run ghelper without root
-    if [[ -n "$REAL_USER" ]]; then
-        chown -R "$REAL_USER:$REAL_USER" "$INSTALL_DIR"
-        _info "ownership → ${BOLD}$REAL_USER:$REAL_USER${RESET} on $INSTALL_DIR/"
-    fi
+    chown -R root:root "$INSTALL_DIR"
+    chmod 755 "$INSTALL_DIR"
+    _info "ownership → ${BOLD}root:root${RESET} on $INSTALL_DIR/"
 else
     _info "${DIM}AppImage mode — skipping binary installation${RESET}"
 fi
@@ -364,9 +389,13 @@ _step 3 "GPU BLOCK HELPER + BOOT SERVICE + SUDOERS RULE"
 
 HELPER_DIR="/usr/local/lib/ghelper"
 HELPER_DEST="$HELPER_DIR/gpu-block-helper.sh"
+PERMISSIONS_HELPER_DEST="$HELPER_DIR/ghelper-permissions.sh"
 SUDOERS_DEST="/etc/sudoers.d/ghelper-gpu"
 
 mkdir -p "$HELPER_DIR"
+chown root:root "$HELPER_DIR"
+chmod 755 "$HELPER_DIR"
+_install_file "$SCRIPT_DIR/ghelper-permissions.sh" "$PERMISSIONS_HELPER_DEST" 755 "permissions helper" || true
 _install_file "$SCRIPT_DIR/gpu-block-helper.sh" "$HELPER_DEST" 755 "GPU block helper" || true
 
 if [[ "$MODE" == "install" ]]; then
@@ -384,8 +413,8 @@ fi
 # helper binaries (gpu-helper validates each subcommand against an internal
 # whitelist, so this is no broader than per-command rules).
 SUDOERS_CONTENT="# G-Helper: passwordless access to the root-owned helper binaries
-ALL ALL=(root) NOPASSWD: $HELPER_DEST
-ALL ALL=(root) NOPASSWD: /opt/ghelper/gpu-helper"
+%$ACCESS_GROUP ALL=(root) NOPASSWD: $HELPER_DEST
+%$ACCESS_GROUP ALL=(root) NOPASSWD: /opt/ghelper/gpu-helper"
 
 if [[ -f "$SUDOERS_DEST" ]] && echo "$SUDOERS_CONTENT" | cmp -s - "$SUDOERS_DEST"; then
     _skip "sudoers rule → already deployed at $SUDOERS_DEST"
@@ -535,7 +564,7 @@ done
 [[ $_hwmon_found -eq 0 ]] && _info "${DIM}no asus fan curve hwmon devices found${RESET}"
 
 echo ""
-_info "sysfs summary: ${GREEN}${CHMOD_APPLIED} armed${RESET} / ${DIM}${CHMOD_SKIPPED} already 0666${RESET}"
+_info "sysfs summary: ${GREEN}${CHMOD_APPLIED} armed${RESET} / ${DIM}${CHMOD_SKIPPED} already 0660 for $ACCESS_GROUP${RESET}"
 
 # ══════════════════════════════════════════════════════════════════════════════
 #  [0x06] DESKTOP INTEGRATION (install mode only)
@@ -608,6 +637,7 @@ if [[ "$MODE" == "appimage" ]]; then
     echo "${YELLOW}${BOLD}  ║                                                                ║${RESET}"
     echo "${YELLOW}${BOLD}  ║${RESET}  ${CYAN}0xF0${RESET}  udev      → $UDEV_DEST"
     echo "${YELLOW}${BOLD}  ║${RESET}  ${CYAN}0xF1${RESET}  cleanup   → removed stale tmpfiles (if any)"
+    echo "${YELLOW}${BOLD}  ║${RESET}  ${CYAN}0xF2${RESET}  group     → $ACCESS_GROUP"
     echo "${YELLOW}${BOLD}  ║                                                                ║${RESET}"
     echo "${YELLOW}${BOLD}  ╠════════════════════════════════════════════════════════════════╣${RESET}"
     echo "${YELLOW}${BOLD}  ║                                                                ║${RESET}"
@@ -629,6 +659,7 @@ else
     echo "${GREEN}${BOLD}  ║${RESET}  ${CYAN}0xF2${RESET}  udev      → $UDEV_DEST"
     echo "${GREEN}${BOLD}  ║${RESET}  ${CYAN}0xF3${RESET}  Desktop   → $DESKTOP_DEST"
     echo "${GREEN}${BOLD}  ║${RESET}  ${CYAN}0xF4${RESET}  Autostart → ~/.config/autostart/ghelper.desktop"
+    echo "${GREEN}${BOLD}  ║${RESET}  ${CYAN}0xF5${RESET}  Group     → $ACCESS_GROUP"
     echo "${GREEN}${BOLD}  ║                                                                ║${RESET}"
     echo "${GREEN}${BOLD}  ╠════════════════════════════════════════════════════════════════╣${RESET}"
     echo "${GREEN}${BOLD}  ║                                                                ║${RESET}"

@@ -14,7 +14,7 @@ namespace GHelper.Linux.USB;
 /// of bus type.
 ///
 /// Requires udev rules for non-root access:
-///   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", MODE="0666"
+///   SUBSYSTEM=="hidraw", ATTRS{idVendor}=="0b05", RUN+="... ghelper-permissions.sh path /dev/%k"
 /// </summary>
 public static class AsusHid
 {
