@@ -274,6 +274,20 @@ cd src && dotnet list package --outdated
 sudo ./install/install-local.sh
 ```
 
+### `╠══[ ARCH PACKAGE ]══╣`
+
+An Arch `PKGBUILD` prototype is available in `packaging/arch/`.
+
+```bash
+cd packaging/arch
+makepkg -si
+sudo usermod -aG ghelper "$USER"
+```
+
+Log out and back in after adding the user to `ghelper`. The package installs
+the `ghelper` group through `sysusers.d`, keeps `/opt/ghelper` root-owned, and
+limits passwordless helper access to members of that group.
+
 <details>
 <summary><code>╠══[ MANUAL BUILD COMMANDS ]══╣</code></summary>
 

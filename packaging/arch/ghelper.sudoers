@@ -1,0 +1,3 @@
+# G-Helper: passwordless access to root-owned helper binaries for trusted users.
+%ghelper ALL=(root) NOPASSWD: /usr/local/lib/ghelper/gpu-block-helper.sh
+%ghelper ALL=(root) NOPASSWD: /opt/ghelper/gpu-helper

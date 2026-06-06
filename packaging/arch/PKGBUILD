@@ -1,0 +1,75 @@
+# Maintainer: G-Helper Linux contributors
+pkgname=g-helper-linux
+pkgver=1.0.0
+pkgrel=1
+pkgdesc="ASUS laptop control utility for Linux"
+arch=('x86_64')
+url="https://github.com/utajum/g-helper-linux"
+license=('GPL-3.0-only')
+depends=(
+  'desktop-file-utils'
+  'fontconfig'
+  'gcc-libs'
+  'glibc'
+  'hicolor-icon-theme'
+  'libx11'
+  'polkit'
+  'sudo'
+  'systemd'
+  'zlib'
+)
+makedepends=(
+  'clang'
+  'dotnet-sdk'
+  'upx'
+  'wayland'
+)
+provides=('ghelper')
+conflicts=('ghelper')
+install=ghelper.install
+source=(
+  "$pkgname-$pkgver.tar.gz::$url/archive/refs/tags/v$pkgver.tar.gz"
+  'ghelper.sysusers'
+  'ghelper.sudoers'
+)
+sha256sums=(
+  'SKIP'
+  'SKIP'
+  'SKIP'
+)
+
+prepare() {
+  cd "$srcdir/$pkgname-$pkgver"
+  sed -i "s/VERSION_PLACEHOLDER/$pkgver/" install/90-ghelper.rules
+}
+
+build() {
+  cd "$srcdir/$pkgname-$pkgver"
+  export DOTNET_CLI_HOME="$srcdir/.dotnet"
+  export NUGET_PACKAGES="$srcdir/.nuget/packages"
+  ./build.sh
+}
+
+package() {
+  cd "$srcdir/$pkgname-$pkgver"
+
+  install -Dm755 dist/ghelper "$pkgdir/opt/ghelper/ghelper"
+  install -d "$pkgdir/usr/bin"
+  ln -s /opt/ghelper/ghelper "$pkgdir/usr/bin/ghelper"
+
+  install -Dm755 install/ghelper-permissions.sh "$pkgdir/usr/local/lib/ghelper/ghelper-permissions.sh"
+  install -Dm755 install/gpu-block-helper.sh "$pkgdir/usr/local/lib/ghelper/gpu-block-helper.sh"
+  install -Dm755 install/ghelper-gpu-boot.sh "$pkgdir/usr/local/lib/ghelper/ghelper-gpu-boot.sh"
+  install -Dm644 install/ghelper-gpu-boot.service "$pkgdir/usr/lib/systemd/system/ghelper-gpu-boot.service"
+  install -Dm644 install/90-ghelper.rules "$pkgdir/usr/lib/udev/rules.d/90-ghelper.rules"
+
+  "$pkgdir/opt/ghelper/ghelper" --extract-helper gpu-helper "$pkgdir/opt/ghelper/gpu-helper" >/dev/null
+  chmod 755 "$pkgdir/opt/ghelper/gpu-helper"
+
+  install -Dm644 install/ghelper.desktop "$pkgdir/usr/share/applications/ghelper.desktop"
+  install -Dm644 install/ghelper.png "$pkgdir/usr/share/icons/hicolor/256x256/apps/ghelper.png"
+  install -Dm644 LICENSE "$pkgdir/usr/share/licenses/$pkgname/LICENSE"
+
+  install -Dm644 "$srcdir/ghelper.sysusers" "$pkgdir/usr/lib/sysusers.d/ghelper.conf"
+  install -Dm440 "$srcdir/ghelper.sudoers" "$pkgdir/etc/sudoers.d/ghelper-gpu"
+}

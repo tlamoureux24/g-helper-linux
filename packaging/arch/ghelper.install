@@ -1,0 +1,17 @@
+post_install() {
+  echo "G-Helper Linux installed."
+  echo "Add trusted users to the ghelper group:"
+  echo "  sudo usermod -aG ghelper <user>"
+  echo "Users must log out and back in before group access is active."
+  echo "Enable the GPU boot service if you use deferred GPU mode switching:"
+  echo "  sudo systemctl enable ghelper-gpu-boot.service"
+}
+
+post_upgrade() {
+  post_install
+}
+
+post_remove() {
+  echo "G-Helper Linux removed."
+  echo "The ghelper group is left in place in case local policy still references it."
+}
