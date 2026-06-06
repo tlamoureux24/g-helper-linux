@@ -292,7 +292,7 @@ if [[ "$MODE" == "uninstall" ]]; then
     echo "${RED}${BOLD}  ║${RESET}  ${DIM}GPU mode will be reset to Standard before files are removed.${RESET}"
     echo "${RED}${BOLD}  ╚═════════════════════════════════════════════════════════╝${RESET}"
     echo ""
-    printf "  ${BOLD}Type ${RED}YES${RESET}${BOLD} to confirm uninstall: ${RESET}"
+    printf "  %sType %sYES%s%s to confirm uninstall: %s" "$BOLD" "$RED" "$RESET" "$BOLD" "$RESET"
     read -r confirm
     if [[ "$confirm" != "YES" ]]; then
         echo ""
@@ -304,7 +304,11 @@ if [[ "$MODE" == "uninstall" ]]; then
     # ── Stop running process ──
     _step 1 "TERMINATING RUNNING INSTANCES"
     if pgrep -x ghelper &>/dev/null; then
-        pkill -x ghelper 2>/dev/null && _info "ghelper process terminated" || _warn "could not kill ghelper"
+        if pkill -x ghelper 2>/dev/null; then
+            _info "ghelper process terminated"
+        else
+            _warn "could not kill ghelper"
+        fi
         sleep 0.5
     else
         _info "${DIM}no running ghelper process found${RESET}"
@@ -405,17 +409,15 @@ if [[ "$MODE" == "install" ]]; then
     _step 1 "SCANNING LOCAL BUILD ARTIFACTS"
 
     # Single binary — native .so libs are embedded and extracted at runtime.
-    for f in ghelper; do
-        if [[ ! -f "$DIST_DIR/$f" ]]; then
-            echo ""
-            echo "${RED}${BOLD}  ╔══[ BUILD NOT FOUND ]═════════════════════════════════╗${RESET}"
-            echo "${RED}${BOLD}  ║${RESET}  ${RED}Missing artifact:${RESET} $DIST_DIR/$f"
-            echo "${RED}${BOLD}  ║${RESET}  ${YELLOW}Run ./build.sh first${RESET}"
-            echo "${RED}${BOLD}  ║${RESET}  ${DIM}...or use install.sh to download latest release${RESET}"
-            echo "${RED}${BOLD}  ╚═════════════════════════════════════════════════════╝${RESET}"
-            exit 1
-        fi
-    done
+    if [[ ! -f "$DIST_DIR/ghelper" ]]; then
+        echo ""
+        echo "${RED}${BOLD}  ╔══[ BUILD NOT FOUND ]═════════════════════════════════╗${RESET}"
+        echo "${RED}${BOLD}  ║${RESET}  ${RED}Missing artifact:${RESET} $DIST_DIR/ghelper"
+        echo "${RED}${BOLD}  ║${RESET}  ${YELLOW}Run ./build.sh first${RESET}"
+        echo "${RED}${BOLD}  ║${RESET}  ${DIM}...or use install.sh to download latest release${RESET}"
+        echo "${RED}${BOLD}  ╚═════════════════════════════════════════════════════╝${RESET}"
+        exit 1
+    fi
 
     BINARY_SIZE=$(du -sh "$DIST_DIR/ghelper" | cut -f1)
     _info "Binary located: ${BOLD}$DIST_DIR/ghelper${RESET} ${DIM}(${BINARY_SIZE})${RESET}"

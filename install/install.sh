@@ -313,7 +313,7 @@ if [[ "$MODE" == "uninstall" ]]; then
     echo "${RED}${BOLD}  ║${RESET}  ${DIM}GPU mode will be reset to Standard before files are removed.${RESET}"
     echo "${RED}${BOLD}  ╚═════════════════════════════════════════════════════════╝${RESET}"
     echo ""
-    printf "  ${BOLD}Type ${RED}YES${RESET}${BOLD} to confirm uninstall: ${RESET}"
+    printf "  %sType %sYES%s%s to confirm uninstall: %s" "$BOLD" "$RED" "$RESET" "$BOLD" "$RESET"
     read -r confirm < /dev/tty
     if [[ "$confirm" != "YES" ]]; then
         echo ""
@@ -325,7 +325,11 @@ if [[ "$MODE" == "uninstall" ]]; then
     # ── Stop running process ──
     _step 1 "TERMINATING RUNNING INSTANCES"
     if pgrep -x ghelper &>/dev/null; then
-        pkill -x ghelper 2>/dev/null && _info "ghelper process terminated" || _warn "could not kill ghelper"
+        if pkill -x ghelper 2>/dev/null; then
+            _info "ghelper process terminated"
+        else
+            _warn "could not kill ghelper"
+        fi
         sleep 0.5
     else
         _info "${DIM}no running ghelper process found${RESET}"

@@ -47,7 +47,7 @@ if command -v wayland-scanner &>/dev/null && command -v cc &>/dev/null; then
     echo ""
     echo "Building wlr-randr v${WLR_VERSION}..."
     (
-        cd "$WLR_RANDR_DIR"
+        cd "$WLR_RANDR_DIR" || exit
         wayland-scanner client-header \
             protocol/wlr-output-management-unstable-v1.xml \
             wlr-output-management-unstable-v1-client-protocol.h
@@ -78,7 +78,7 @@ if command -v cc &>/dev/null; then
     echo ""
     echo "Building gpu-helper..."
     (
-        cd "$GPU_HELPER_DIR"
+        cd "$GPU_HELPER_DIR" || exit
         cc -O2 -Wall -o gpu-helper gpu-helper.c -ldl
         strip gpu-helper
     )
@@ -169,7 +169,7 @@ fi
 # Summary
 BINARY_SIZE=$(du -sh "$DIST_DIR/ghelper" | cut -f1)
 TOTAL_SIZE=$(du -sh "$DIST_DIR" | cut -f1)
-FILE_COUNT=$(ls -1 "$DIST_DIR" | wc -l)
+FILE_COUNT=$(find "$DIST_DIR" -mindepth 1 -maxdepth 1 | wc -l)
 
 echo ""
 echo "=== Build Complete ==="

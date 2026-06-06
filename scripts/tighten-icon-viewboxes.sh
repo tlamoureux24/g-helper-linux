@@ -23,7 +23,7 @@ for dir in "$@"; do
     for svg in "$dir"/*.svg; do
         vb=$(grep -oE 'viewBox="[^"]+"' "$svg" | head -1 | sed 's/viewBox="//;s/"//')
         [[ -z "$vb" ]] && { echo "skip (no viewBox): $svg"; continue; }
-        read -r vx vy vw vh <<< "$vb"
+        read -r _ _ vw vh <<< "$vb"
 
         tmp=$(mktemp /tmp/tighten_XXXX.png)
         rsvg-convert -w "$RENDER_WIDTH" "$svg" > "$tmp" 2>/dev/null
@@ -46,6 +46,6 @@ print(f'{nx:.2f} {ny:.2f} {nw:.2f} {nh:.2f}')
 ") || { echo "skip (bbox compute failed): $svg"; continue; }
 
         sed -i -E "s|viewBox=\"[^\"]+\"|viewBox=\"$new_vb\"|" "$svg"
-        echo "  $(basename $dir)/$(basename $svg): $vb -> $new_vb"
+        echo "  $(basename "$dir")/$(basename "$svg"): $vb -> $new_vb"
     done
 done
