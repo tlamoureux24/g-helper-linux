@@ -215,31 +215,25 @@ _reset_gpu_to_standard() {
 _cleanup_access_group() {
     _step 4 "CLEANING ACCESS GROUP"
 
-    if ! getent group "$ACCESS_GROUP" >/dev/null; then
+    local group_entry group_gid primary_users
+    group_entry="$(getent group "$ACCESS_GROUP" 2>/dev/null || true)"
+    if [[ -z "$group_entry" ]]; then
         _gone "group $ACCESS_GROUP"
         return 0
     fi
 
-    if [[ -n "$REAL_USER" ]] && id -nG "$REAL_USER" 2>/dev/null | tr ' ' '\n' | grep -qx "$ACCESS_GROUP"; then
-        if gpasswd -d "$REAL_USER" "$ACCESS_GROUP" >/dev/null 2>&1; then
-            _remove "group membership → $REAL_USER removed from $ACCESS_GROUP"
-        else
-            _warn "failed to remove $REAL_USER from $ACCESS_GROUP"
-        fi
-    else
-        _skip "group membership → ${REAL_USER:-unknown} not in $ACCESS_GROUP"
+    group_gid="$(printf "%s" "$group_entry" | cut -d: -f3)"
+    primary_users="$(awk -F: -v gid="$group_gid" '$4 == gid { print $1 }' /etc/passwd | paste -sd, -)"
+
+    if [[ -n "$primary_users" ]]; then
+        _warn "group $ACCESS_GROUP is a primary group for: $primary_users; leaving it in place"
+        return 0
     fi
 
-    local members
-    members="$(getent group "$ACCESS_GROUP" | cut -d: -f4)"
-    if [[ -z "$members" ]]; then
-        if groupdel "$ACCESS_GROUP" 2>/dev/null; then
-            _remove "group → $ACCESS_GROUP"
-        else
-            _warn "failed to delete group $ACCESS_GROUP; it may be a primary group or managed externally"
-        fi
+    if groupdel "$ACCESS_GROUP" 2>/dev/null; then
+        _remove "group → $ACCESS_GROUP"
     else
-        _warn "group $ACCESS_GROUP still has members ($members); leaving it in place"
+        _warn "failed to delete group $ACCESS_GROUP"
     fi
 }
 
