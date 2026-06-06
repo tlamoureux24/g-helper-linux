@@ -159,7 +159,7 @@ _ensure_user_in_group() {
     else
         usermod -aG "$ACCESS_GROUP" "$user"
         _inject "group membership → $user added to $ACCESS_GROUP"
-        _warn "log out and back in for the new $ACCESS_GROUP membership to affect running sessions"
+        _warn "reboot recommended so $ACCESS_GROUP membership, udev, sysfs, and GPU helpers settle cleanly"
     fi
 }
 
@@ -778,6 +778,9 @@ else
     echo "${GREEN}${BOLD}  ║${RESET}  ${MAGENTA}CHMOD: $CHMOD_APPLIED armed${RESET}   ${DIM}$CHMOD_SKIPPED already set${RESET}"
     echo "${GREEN}${BOLD}  ║                                                                ║${RESET}"
     echo "${GREEN}${BOLD}  ╚════════════════════════════════════════════════════════════════╝${RESET}"
+    echo ""
+    echo "  ${YELLOW}${BOLD}Reboot recommended before launching ghelper.${RESET}"
+    echo "  ${DIM}A logout/login may update group membership, but reboot applies udev/sysfs/GPU state cleanly.${RESET}"
     echo ""
     _typeout "${GREEN}${BOLD}  > NEURAL LINK ESTABLISHED :: LAUNCH WITH: ghelper${RESET}" 0.03
     echo ""

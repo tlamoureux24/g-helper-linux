@@ -19,4 +19,5 @@ After installing:
 sudo usermod -aG ghelper <user>
 ```
 
-Users must log out and back in before the new group membership is active.
+Reboot before launching G-Helper so group access, udev permissions, sysfs state,
+and GPU boot helpers are applied from a clean session.

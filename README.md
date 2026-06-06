@@ -218,8 +218,9 @@ curl -sL https://raw.githubusercontent.com/utajum/g-helper-linux/master/install/
 ```
 
 The installer creates a `ghelper` system group, adds the installing user, and
-grants hardware access to that group only. Log out and back in after install so
-your desktop session receives the new group membership.
+grants hardware access to that group only. Reboot after install so group
+membership, udev permissions, sysfs state, and GPU boot helpers are all applied
+from a clean session.
 
 On multi-user systems, add every trusted user who should control laptop hardware:
 
@@ -284,9 +285,9 @@ makepkg -si
 sudo usermod -aG ghelper "$USER"
 ```
 
-Log out and back in after adding the user to `ghelper`. The package installs
-the `ghelper` group through `sysusers.d`, keeps `/opt/ghelper` root-owned, and
-limits passwordless helper access to members of that group.
+Reboot after adding the user to `ghelper`. The package installs the `ghelper`
+group through `sysusers.d`, keeps `/opt/ghelper` root-owned, and limits
+passwordless helper access to members of that group.
 
 <details>
 <summary><code>╠══[ MANUAL BUILD COMMANDS ]══╣</code></summary>

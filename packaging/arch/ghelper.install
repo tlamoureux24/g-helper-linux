@@ -1,8 +1,10 @@
+# shellcheck shell=bash
+
 post_install() {
   echo "G-Helper Linux installed."
   echo "Add trusted users to the ghelper group:"
   echo "  sudo usermod -aG ghelper <user>"
-  echo "Users must log out and back in before group access is active."
+  echo "Reboot before launching ghelper so group access, udev, sysfs, and GPU boot helpers settle cleanly."
   echo "Enable the GPU boot service if you use deferred GPU mode switching:"
   echo "  sudo systemctl enable ghelper-gpu-boot.service"
 }
